@@ -13,6 +13,7 @@ from collections import defaultdict
 import json
 import glob
 import sys
+import re
 
 class Food_storage:
     def __init__(self, name, food=None):
@@ -31,7 +32,7 @@ class Food_storage:
         else:
             self.storage[name] = defaultdict(int)
         
-    def add_food(self, food, location):
+    def add_food(self, food, location, quantity=1):
         """
         Drawer locations (Top to bottom):
             Shelf 1
@@ -39,10 +40,9 @@ class Food_storage:
             Ice Tray
             Drawer 1 - 5
         """
-        for f in food.split(','):
-            if location not in self.storage:
-                self.add_location(location)
-            self.storage[location][f.strip()] += 1
+        if location not in self.storage:
+            self.add_location(location)
+        self.storage[location][food] += quantity
     
     def remove_location(self, name):
         del self.storage[name]
@@ -85,6 +85,24 @@ def load_storage():
             storage_objects.append(storage)
     return storage_objects
 
+def split_food_and_quantity(string):
+    split_list = string.split(',')
+    entries = []
+    pattern = r'([a-z\sA-Z]+)|([0-9]+)'
+    for entry in split_list:       
+        objects = []
+        for m in re.finditer(pattern, entry):
+            match = m.group(0).strip()
+            try:
+                match = int(match)
+            except ValueError:
+                pass
+            if match == '':
+                continue
+            objects.append(match)
+        entries.append(objects)  
+    return entries
+
 def add_food_loop(obj):
     while True:
         locations = obj.storage.keys()
@@ -95,8 +113,16 @@ def add_food_loop(obj):
             print('\nCurrent location(s) : {}. (you can also add a new one)'
                   .format(', '.join([l for l in locations])))
         loc = input('Enter a location : ')
-        obj.add_food(food, loc)
-        print('>>> {} added to {}'.format(food, loc))
+        entries = split_food_and_quantity(food)
+        for entry in entries:
+            quantity = 1
+            for num_or_word in entry:
+                if type(num_or_word) == str:
+                    f = num_or_word
+                if type(num_or_word) == int:
+                    quantity = num_or_word
+            obj.add_food(f, loc, quantity=quantity)
+            print('>>> {} {} added to {}'.format(quantity, f, loc))
 
 def remove_food_loop(obj):
     while True:
@@ -219,12 +245,12 @@ if __name__ == "__main__":
               .format(len(objs)))
         for o in objs:
             print('   {}'.format(o.name))
-        n = input('Type the name to edit existing object or type new to create a new object. \n\n')
-        if n == 'new':
-            active_obv = create_obj()
+        n = input('Type the name to edit existing object or press enter to create a new object. \n\n')
         for o in objs:
             if o.name == n:
                 active_obj = o
+            else:
+                active_obj = create_obj()
             
             
     # User creates new storage object if none exist
