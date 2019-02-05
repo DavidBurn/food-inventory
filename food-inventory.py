@@ -47,8 +47,8 @@ class Food_storage:
     def remove_location(self, name):
         del self.storage[name]
         
-    def remove_food(self, food, location):
-        self.storage[location][food] -= 1
+    def remove_food(self, food, location, quantity):
+        self.storage[location][food] -= quantity
         if self.storage[location][food] == 0:
             del self.storage[location][food]
     
@@ -130,17 +130,51 @@ def remove_food_loop(obj):
         if food == 'done':
             break
         total = 0
-        for loc in obj.storage.keys():
-            if food in obj.storage[loc]:
-                num = obj.storage[loc][food]
+        # Find quanitities of item if applicable, food now = f
+        entries = split_food_and_quantity(food)
+        for entry in entries:
+            quantity = 1
+            for num_or_word in entry:
+                if type(num_or_word) == str:
+                    f = num_or_word
+                if type(num_or_word) == int:
+                    quantity = num_or_word
+        # Find locations of the item
+        o = obj.storage
+        for loc in o.keys():
+            if f in o[loc]:
+                num = o[loc][f]
                 total += num
-                print('>>> We have {} {} in the {}'.format(num, food, loc))
+                print('>>> We have {} {} in the {}'.format(num, f, loc))
+        # Check if number to be removed exists in the store
         if total == 0:
-            print('>>> {} not found in the {}'.format(food, obj.name))
+            print('>>> No {} found in the {}'.format(f, obj.name))
             continue
+        elif total < quantity:
+            print('>>> Only {} {} found in the {}, please check quantities'.format(total, f, obj.name))
+            continue
+        # If quantity exists, enter a location
         loc = input('Enter a location : ')
-        obj.remove_food(food, loc)
-        print('>>> {} removed from {}'.format(food, loc))
+        # Clause for when quantity to remove is greater than in the store
+        if o[loc][f] < quantity:
+            while True:
+                num_available = o[loc][f]
+                obj.remove_food(f, loc, num_available)
+                quantity -= num_available
+                if quantity == 0:
+                    break
+                print('>>> {} {} removed from {}'.format(num_available, f, loc))
+                print('{} still remaining to remove'.format(quantity))
+                for loc in o.keys():
+                    if f in o[loc]:
+                        num = o[loc][f]
+                        total += num
+                        print('>>> We have {} {} in the {}'.format(num, f, loc))
+                loc = input('Enter a location : ')
+                
+        else:
+            obj.remove_food(f, loc, quantity)
+            print('>>> {} {} removed from {}'.format(quantity, f, loc))
 
 def find(obj):
     print('-'*20)
